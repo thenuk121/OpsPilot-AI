@@ -1,30 +1,66 @@
-import csv
-
-from models.inventory import InventoryItem
+from database.database import get_connection
 
 
-def load_inventory(file_path):
-    inventory = []
+def add_inventory_item(name, quantity, minimum_stock):
+    connection = get_connection()
+    cursor = connection.cursor()
 
-    with open(file_path, mode="r", newline="") as file:
-        reader = csv.DictReader(file)
+    cursor.execute(
+        """
+        INSERT OR IGNORE INTO inventory
+        (name, quantity, minimum_stock)
+        VALUES (?, ?, ?)
+        """,
+        (name, quantity, minimum_stock)
+    )
 
-        for row in reader:
-            item = InventoryItem(
-                name=row["name"],
-                quantity=int(row["quantity"]),
-                minimum_stock=int(row["minimum_stock"])
-            )
+    connection.commit()
+    connection.close()
 
-            inventory.append(item)
 
-    return inventory
+def get_all_inventory():
+    connection = get_connection()
+    cursor = connection.cursor()
 
-def get_low_stock_items(inventory):
-    low_stock_items = []
+    cursor.execute("""
+        SELECT id, name, quantity, minimum_stock
+        FROM inventory
+    """)
 
-    for item in inventory:
-        if item.is_low_stock():
-            low_stock_items.append(item)
+    rows = cursor.fetchall()
+    connection.close()
 
-    return low_stock_items
+    return rows
+
+
+def get_low_stock_inventory():
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT id, name, quantity, minimum_stock
+        FROM inventory
+        WHERE quantity <= minimum_stock
+    """)
+
+    rows = cursor.fetchall()
+    connection.close()
+
+    return rows
+
+
+def update_inventory_quantity(name, new_quantity):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        UPDATE inventory
+        SET quantity = ?
+        WHERE name = ?
+        """,
+        (new_quantity, name)
+    )
+
+    connection.commit()
+    connection.close()
